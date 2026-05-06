@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://cnklo0teivm57"]
+[gd_scene format=3 uid="uid://cnklo0teivm57"]
 
 [ext_resource type="Texture2D" uid="uid://8myjtmpqu2w1" path="res://among-us-assets-main/Maps/room_science-sharedassets0.assets-90.png" id="1_66u6e"]
 [ext_resource type="Script" path="res://scripts/player_test.gd" id="2_vt2nw"]
