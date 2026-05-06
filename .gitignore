@@ -1,0 +1,6 @@
+.godot/
+export.cfg
+export_presets.cfg
+output/
+tmp/
+addons/godot_mcp_solo/
