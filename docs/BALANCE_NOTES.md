@@ -121,3 +121,151 @@
   + Thiếu vật phẩm khi vào nhiệm vụ quan trọng
   + Lãng phí tài nguyên hiếm
   + Không đủ đồ cho giai đoạn cuối game
+
+3. Áp lực chính về cuối game là gì?
+
+3.1. Sự cố lò phản ứng
+- Tình trạng
+  + Lò phản ứng bắt đầu mất ổn định
+  + Hệ thống có thể sụp đổ nếu không xử lý đúng thứ tự
+- Áp lực chính
+  + Không được trì hoãn sửa chữa
+  + Sai một bước có thể dẫn đến phản ứng dây chuyền
+- Hậu quả nếu không xử lý
+  + Tăng nhiệt toàn hệ thống
+  + Mất kiểm soát năng lượng
+  + Kích hoạt chuỗi sự kiện thất bại toàn tàu
+
+3.2. Bức xạ và môi trường độc hại
+- Tình trạng
+  + Khu vực bị nhiễm phóng xạ lan rộng
+  + Bức xạ bắt đầu ảnh hưởng toàn map
+- Áp lực chính
+  + Giảm HP theo thời gian khi ở khu vực nguy hiểm
+  + Hạn chế di chuyển và khám phá
+  + Ép người chơi phải sửa hệ thống thay vì farm tài nguyên
+- Hậu quả nếu không xử lý
+  + HP giảm liên tục không thể hồi phục hiệu quả
+  + Khu vực map dần trở nên không thể sử dụng
+  + Mất nguồn tài nguyên cuối game
+
+3.3. Sự cố hệ thống lỗi đồng thời
+- Tình trạng: Nhiều hệ thống cùng lỗi như hệ thống oxy, nhiệt, lưới điện, hệ thống điều hướng
+- Áp lực chính
+  + Không còn “một nhiệm vụ chính”
+  + Người chơi phải chọn ưu tiên trong tình huống hỗn loạn
+- Hậu qảu nếu không xử lý
+  + Hiệu ứng chồng chéo giữa các hệ thống
+  + Module không hoạt động ổn định
+  + Tài nguyên bị tiêu hao nhanh không kiểm soát
+
+3.4. Áp lực thời gian
+- Tình trạng: Xuấy hiện nhiệm vụ sửa chữa có giới hạn thời gian
+- Áp lực chính
+  + Không được sai thứ tự hành động
+  + Không có thời gian để thử lại
+- Hậu qảu nếu không xử lý
+  + Nhiệm vụ thất bại ngay lập tức
+  + Kích hoạt chuỗi sự cố tiếp theo
+  + Có thể dẫn đến bad ending
+
+3.5. Cạn kiệt tài nguyên cuối game
+- Tình trạng: Pin và vật liệu hiếm gần như cạn, không còn nhiều nguồn an toàn
+- Áp lực chính
+  + Mỗi quyết định tiêu hao tài nguyên đều rất quan trọng
+  + Không còn khả năng “sai và sửa lại”
+- Hậu quả nếu không xử lý
+  + Không đủ vật phẩm cho nhiệm vụ cuối
+  + Không thể kích hoạt escape system
+  + Bị kẹt trong trạng thái không thể tiến hoặc thua
+
+3.6. Sai thứ tự quyết định
+- Tình trạng: Người chơi phải xử lý nhiều nhiệm vụ cùng lúc như sửa lò phản ứng, giữ oxy ở mức ổn định, xử lý bức xạ, chuẩn bị thoát hiểm
+- Áp lực chính
+  + Không còn lựa chọn đúng tuyệt đối
+  + Chỉ có lựa chọn “ít sai hơn”
+- Hậu quả nếu không xử lý
+  + Sửa sai hệ thống trước
+  + Làm trễ nhiệm vụ quan trọng
+  + Kích hoạt chuỗi thất bại dây chuyền
+
+4. Chiến thuật hợp lệ
+
+4.1. Chiến thuật ưu tiên hệ thống
+- Cách chơi: Người chơi xử lý theo thứ tự cố định
+  + Hệ thống oxy
+  + Lò phản ứng
+  + Hệ thống điện
+  + Hệ thống nhiệt
+  + Điều hướng
+- Logic chiến thuật
+  + Không xử lý tất cả cùng lúc
+  + Chỉ tập trung vào hệ thống “có khả năng gây chết ngay”
+  + Bỏ qua tối ưu tài nguyên nếu không liên quan sống còn
+- Khi nào hiệu quả
+  + Khi xảy ra multi-system failure
+  + Khi có timer mission
+  + Khi map bị radiation hoặc thiếu oxy
+- Điểm mạnh
+  + Giảm nguy cơ chết đột ngột
+  + Giữ được nhịp sống ổn định
+  + Dễ kiểm soát panic situation
+- Điểm yếu
+  + Bỏ qua một số hệ thống phụ → giảm hiệu quả lâu dài
+  + Không tối ưu tài nguyên battery
+  + Có thể chậm tiến độ escape
+
+4.2. Chiến thuật giữ tài nguyên cho khủng hoảng
+- Cách chơi: Người chơi luôn chia tài nguyên thành 2 phần 70% dùng cho vận hành bình thường, 30% giữ lại cho tình huống khẩn cấp. Tài nguyên cần giữ battery, repair item, consumable (oxy, medkit), module khẩn cấp
+- Logic chiến thuật
+  + Không dùng hết tài nguyên trong giai đoạn bình thường
+  + Luôn dự phòng cho: reactor meltdown, oxygen collapse, emergency repair mission
+- Khi nào hiệu quả
+  + Late game khi resource scarcity cực cao
+  + Khi xuất hiện chain mission (liên tiếp nhiệm vụ sửa chữa)
+  + Khi có timer escape sequence
+- Điểm mạnh
+  + Không bị “hết tài nguyên đột ngột”
+  + Tăng khả năng vượt qua nhiệm vụ cuối
+  + Ổn định trong tình huống bất ngờ
+- Điểm yếu
+  + Tiến độ chậm hơn người chơi khác
+  + Có thể “dư tài nguyên nhưng không dùng hiệu quả”
+  + Yêu cầu người chơi có kỷ luật cao
+
+5. Chiến thuật dẫn đến thua
+
+5.1. Chiến thuật tối ưu hóa tài nguyên
+- Cách chơi sai: Người chơi cố gắng
+  + Dùng tối đa battery cho craft/module
+  + Tối ưu từng lượt hành động
+  + Không giữ dự trữ tài nguyên
+  + Không để dư bất cứ thứ gì
+- Vì sao dẫn đến thua: Trong late game, hệ thống không còn ổn định:
+  + Reactor có thể meltdown bất ngờ
+  + Oxygen system có thể sụp đổ theo chuỗi
+  + Repair mission có timer gắt
+- Khi khủng hoảng xảy ra
+  + Không còn battery dự phòng
+  + Không còn repair item khẩn cấp
+  + Không có module cứu nguy
+- Chuỗi thất bại
+  + Người chơi dùng hết tài nguyên để tối ưu trạng thái bình thường
+  + Xuất hiện crisis (reactor / oxygen / radiation)
+  + Không có tài nguyên phản ứng
+  + Không sửa được hệ thống đúng thời gian
+  + → fail toàn bộ progression / bad ending
+
+5.2. Chiến thuật chỉ sửa một hệ thống
+- Cách chơi sai: Người chơi chỉ tập trung vào reactor, oxygen hoặc escape system và bỏ qua các hệ thống còn lại như thermal system, power grid, radiation system
+- Vì sao dẫn đến thua: Khi chỉ sửa 1 hệ thống:
+  + Các hệ thống khác vẫn tiếp tục xuống cấp
+  + Tạo hiệu ứng chồng chéo (stacked failure)
+  + Làm hệ thống chính bị ảnh hưởng gián tiếp
+- Chuỗi thất bại
+  + Người chơi tập trung sửa 1 hệ thống quan trọng
+  + Các hệ thống phụ không được xử lý
+  + Lỗi lan sang hệ thống chính (reactor / oxygen)
+  + Áp lực tăng theo cấp số nhân
+  + Không còn đủ lượt để xử lý toàn bộ
+  + → collapse toàn hệ thống
