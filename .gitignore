@@ -4,3 +4,4 @@ export_presets.cfg
 output/
 tmp/
 addons/godot_mcp_solo/
+.env

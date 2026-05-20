@@ -20,6 +20,7 @@ func start_mission() -> void:
 	game.mission_started = true
 	game.ui_controller.hide_start_overlay()
 	game.status_line = game.StoryRules.ACTIVE_STATUS
+	_apply_mission_updates(game.mission_controller.start_mission())
 	game.ui_controller.update_ui()
 
 
@@ -29,7 +30,7 @@ func interact() -> void:
 	if game.game_over or game.puzzle_open:
 		return
 
-	var locked_door_id = game.world_controller.nearest_locked_door_id()
+	var locked_door_id: String = game.world_controller.nearest_locked_door_id()
 	if locked_door_id != "":
 		try_unlock_door(locked_door_id)
 		return
@@ -39,19 +40,19 @@ func interact() -> void:
 		return
 
 	if game.player_pos.distance_to(game.terminal_pos) <= game.INTERACT_RANGE:
+		_apply_mission_updates(game.mission_controller.notify_reach_terminal())
 		if game.actions_left <= 0:
 			game.status_line = "Không còn lượt hành động. Hãy áp dụng lượt mới trước."
 			game.ui_controller.update_ui()
 			return
 
-		var missing = missing_terminal_items()
+		var missing := missing_terminal_items()
 		if missing.size() > 0:
 			game.status_line = "Trạm đang khóa. Còn thiếu: %s" % ", ".join(missing)
 			game.ui_controller.update_ui()
 			return
 
 		open_puzzle()
-		return
 
 
 func on_use_kit_pressed() -> void:
@@ -60,25 +61,26 @@ func on_use_kit_pressed() -> void:
 	if game.game_over or game.puzzle_open:
 		return
 	if game.actions_left <= 0:
-		game.status_line = "Không còn lượt hành động để dùng %s." % game.GameData.emergency_kit_name()
+		game.status_line = "Không còn lượt hành động để dùng vật phẩm cứu nguy."
 		game.ui_controller.update_ui()
 		return
 
-	var kit_name: String = game.GameData.emergency_kit_name()
-	if not game.inventory.has(kit_name):
-		game.status_line = "Bạn chưa có %s trong túi đồ." % kit_name
-		game.ui_controller.update_ui()
-		return
+	if _consume_support_item("Bio Gel"):
+		game.hp = clampf(game.hp + 18.0, 0.0, game.SurvivalSystem.HP_MAX)
+		game.actions_left = maxi(game.actions_left - 1, 0)
+		game.status_line = "Đã dùng Bio Gel: +18 HP."
+	elif _consume_support_item("Portable Oxygen"):
+		game.o2 = clampf(game.o2 + 24.0, 0.0, 100.0)
+		game.actions_left = maxi(game.actions_left - 1, 0)
+		game.status_line = "Đã dùng Portable Oxygen: +24 O2."
+	elif _consume_support_item("Backup Battery"):
+		game.battery = clampf(game.battery + 18.0, 0.0, game.SurvivalSystem.BATTERY_MAX)
+		game.actions_left = maxi(game.actions_left - 1, 0)
+		game.status_line = "Đã dùng Backup Battery: +18 pin."
+	else:
+		game.status_line = "Không có vật phẩm cứu nguy khả dụng trong túi đồ."
 
-	_remove_first_inventory_item(kit_name)
-	game.actions_left = maxi(game.actions_left - 1, 0)
-	game.battery = clampf(game.battery - 4.0, 0.0, game.SurvivalSystem.BATTERY_MAX)
-	game.o2 = clampf(game.o2 + 10.0, 0.0, 100.0)
-	game.hydration = clampf(game.hydration + 10.0, 0.0, 100.0)
-	game.hp = clampf(game.hp + 8.0, 0.0, game.SurvivalSystem.HP_MAX)
-	game.status_line = "Đã dùng %s: +10 O2, +10 Nước, +8 HP, -4 Pin." % kit_name
-	game.ai_controller.log_ai("Hệ thống", game.status_line, "system")
-	check_loss_from_resources("sau khi dùng " + kit_name)
+	check_loss_from_resources("sau khi dùng vật phẩm cứu nguy")
 	game.ui_controller.update_ui()
 
 
@@ -90,7 +92,7 @@ func on_craft_pressed() -> void:
 
 	var recipe := _selected_recipe()
 	if recipe.is_empty():
-		game.status_line = "Chưa có công thức chế tạo nào được chọn."
+		game.status_line = "Chưa có công thức nào được chọn."
 		game.ui_controller.update_ui()
 		return
 
@@ -105,7 +107,7 @@ func on_craft_pressed() -> void:
 		game.ui_controller.update_ui()
 		return
 
-	var missing = _missing_recipe_ingredients(recipe)
+	var missing := _missing_recipe_ingredients(recipe)
 	if missing.size() > 0:
 		game.status_line = "Thiếu nguyên liệu: %s" % ", ".join(missing)
 		game.ui_controller.update_ui()
@@ -131,6 +133,7 @@ func on_craft_pressed() -> void:
 			game.active_modules[module_id] = maxi(current_turns, turns)
 
 	game.status_line = "Đã chế tạo: %s" % str(recipe.get("name", "vật phẩm"))
+	_apply_mission_updates(game.mission_controller.notify_recipe_crafted(str(recipe.get("id", ""))))
 	game.ai_controller.log_ai("Hệ thống", game.status_line, "system")
 	game.ui_controller.update_ui()
 
@@ -158,7 +161,7 @@ func active_modules_text() -> String:
 
 	var parts: PackedStringArray = []
 	for module_id in game.active_modules.keys():
-		var label = game.GameData.module_name(str(module_id))
+		var label: String = game.GameData.module_name(str(module_id))
 		parts.append("%s:%d" % [label, int(game.active_modules[module_id])])
 	return ", ".join(parts)
 
@@ -200,6 +203,14 @@ func _remove_first_inventory_item(item_name: String) -> void:
 		game.inventory.remove_at(idx)
 
 
+func _consume_support_item(item_name: String) -> bool:
+	var idx: int = game.inventory.find(item_name)
+	if idx < 0:
+		return false
+	game.inventory.remove_at(idx)
+	return true
+
+
 func _apply_instant_effects(effects: Dictionary) -> void:
 	game.o2 = clampf(game.o2 + float(effects.get("o2", 0.0)), 0.0, 100.0)
 	game.hydration = clampf(game.hydration + float(effects.get("hydration", 0.0)), 0.0, 100.0)
@@ -221,13 +232,14 @@ func count_item_in_inventory(item_name: String) -> int:
 
 func try_unlock_door(door_id: String) -> void:
 	var door: Dictionary = game.doors[door_id]
-	var required_item = str(door.get("required_item", ""))
+	var required_item := str(door.get("required_item", ""))
 	if required_item == "":
 		return
 	if game.inventory.has(required_item):
 		door["unlocked"] = true
 		game.doors[door_id] = door
 		game.status_line = "%s đã mở. Đường đi mới đã khả dụng." % str(door.get("name", "Cửa"))
+		_apply_mission_updates(game.mission_controller.notify_door_unlocked(door_id))
 		game.ai_controller.log_ai("Hệ thống", game.status_line, "system")
 	else:
 		game.status_line = "%s cần vật phẩm: %s." % [str(door.get("name", "Cửa")), required_item]
@@ -241,23 +253,27 @@ func pick_item(index: int) -> void:
 		return
 
 	game.items[index]["collected"] = true
-	var name = str(game.items[index]["name"])
-	var item_type = str(game.items[index]["type"])
+	var name := str(game.items[index]["name"])
+	var item_type := str(game.items[index]["type"])
 	game.inventory.append(name)
 	game.actions_left = maxi(game.actions_left - 1, 0)
 
-	if item_type == "battery":
-		game.battery = minf(game.SurvivalSystem.BATTERY_MAX, game.battery + 12.0)
 	if item_type == "key":
-		game.status_line = "Đã nhặt %s. Có thể mở cửa khóa tương ứng." % name
+		game.status_line = "Đã nhặt %s. Có thể mở khu tiếp theo." % name
+	elif item_type == "repair":
+		game.status_line = "Đã nhặt repair item: %s." % name
 	else:
 		game.status_line = "Đã nhặt: %s" % name
+	_apply_mission_updates(game.mission_controller.notify_item_collected(name))
 	game.ui_controller.update_ui()
 
 
 func missing_terminal_items() -> Array[String]:
 	var missing: Array[String] = []
-	for item_name in game.GameData.required_terminal_items():
+	var required_items: Array[String] = game.GameData.required_terminal_items_for_stage(
+		game.repair_stage_index
+	)
+	for item_name in required_items:
 		if not game.inventory.has(item_name):
 			missing.append(item_name)
 	return missing
@@ -274,7 +290,7 @@ func on_apply_turn_pressed() -> void:
 	if game.game_over:
 		return
 
-	var alloc_now = get_allocation_from_ui()
+	var alloc_now := get_allocation_from_ui()
 	if not game.SurvivalSystem.allocation_valid(alloc_now, game.battery):
 		game.status_line = "Phân bổ không hợp lệ: mỗi hệ <= 6, tổng <= 12, tổng <= pin hiện có."
 		game.ui_controller.update_ui()
@@ -301,9 +317,7 @@ func on_apply_turn_pressed() -> void:
 		return
 
 	game.turn += 1
-	game.actions_left = game.SurvivalSystem.next_actions_budget(
-		game.o2, game.hydration, game.satiety
-	)
+	game.actions_left = game.SurvivalSystem.next_actions_budget(game.o2, game.hydration, game.satiety)
 	reset_allocation_ui()
 
 	if game.last_event_title == "Ổn định":
@@ -328,35 +342,8 @@ func _apply_active_modules() -> void:
 
 		match module_key:
 			"power_regulator":
-				game.battery = minf(game.SurvivalSystem.BATTERY_MAX, game.battery + 1.0)
-				notes.append("+1 Pin")
-			"thermal_core":
-				game.temp = maxf(game.temp, 16.0)
-				notes.append("Ổn định nhiệt >= 16C")
-			"water_recycler":
-				game.hydration = clampf(game.hydration + 4.0, 0.0, 100.0)
-				notes.append("+4 Nước")
-			"micro_algae":
-				game.hydration = clampf(game.hydration + 4.0, 0.0, 100.0)
-				game.satiety = clampf(game.satiety + 6.0, 0.0, 100.0)
-				notes.append("+4 Nước, +6 Độ no")
-			"autobalance_chip":
-				var min_stat := mini(mini(int(game.o2), int(game.hydration)), int(game.satiety))
-				if int(game.o2) == min_stat:
-					game.o2 = clampf(game.o2 + 4.0, 0.0, 100.0)
-					notes.append("+4 O2")
-				elif int(game.hydration) == min_stat:
-					game.hydration = clampf(game.hydration + 4.0, 0.0, 100.0)
-					notes.append("+4 Nước")
-				else:
-					game.satiety = clampf(game.satiety + 4.0, 0.0, 100.0)
-					notes.append("+4 Độ no")
-			"repair_drone":
-				game.repair_progress = minf(100.0, game.repair_progress + 5.0)
-				notes.append("+5% Sửa tàu")
-			"life_patch":
-				game.hp = clampf(game.hp + 4.0, 0.0, game.SurvivalSystem.HP_MAX)
-				notes.append("+4 HP")
+				game.battery = minf(game.SurvivalSystem.BATTERY_MAX, game.battery + 2.0)
+				notes.append("+2 pin")
 			_:
 				pass
 
@@ -391,10 +378,10 @@ func apply_survival_result(result: Dictionary) -> void:
 	game.satiety = float(result.get("satiety", game.satiety))
 	game.hp = float(result.get("hp", game.hp))
 
-	var damage = float(result.get("damage", 0.0))
+	var damage := float(result.get("damage", 0.0))
 	if not bool(result.get("game_over", false)):
 		if damage > 0.0:
-			game.status_line = "Lượt này bạn mất %.1f HP do mất cân bằng môi trường." % damage
+			game.status_line = "Lượt này bạn mất %.1f HP do cân bằng sinh tồn kém." % damage
 		else:
 			game.status_line = "Lượt này ổn định. Hãy tiếp tục khám phá."
 
@@ -406,7 +393,7 @@ func apply_survival_result(result: Dictionary) -> void:
 
 
 func apply_random_event() -> void:
-	var event_result = game.EventSystem.roll_event(game.rng, build_survival_state())
+	var event_result: Dictionary = game.EventSystem.roll_event(game.rng, build_survival_state())
 	var event_state: Dictionary = event_result["state"]
 
 	game.battery = float(event_state.get("battery", game.battery))
@@ -438,7 +425,6 @@ func check_loss_from_resources(context: String) -> void:
 		return
 	if game.battery <= 0.0 and game.repair_progress < 100.0:
 		set_game_over("Pin cạn %s trước khi sửa xong phi thuyền." % context)
-		return
 
 
 func get_allocation_from_ui() -> Dictionary:
@@ -459,7 +445,7 @@ func reset_allocation_ui() -> void:
 
 func open_puzzle() -> void:
 	if game.current_puzzle_index >= game.puzzles.size():
-		game.status_line = "Bạn đã giải hết câu đố. Tiếp tục cân bằng tài nguyên và chờ thoát tàu."
+		game.status_line = "Bạn đã giải hết câu đố. Hãy duy trì tài nguyên đến khi escape."
 		game.ui_controller.update_ui()
 		return
 
@@ -484,23 +470,24 @@ func on_puzzle_choice(index: int) -> void:
 	if not game.puzzle_open or game.game_over:
 		return
 
-	var puzzle: Dictionary = game.puzzles[game.current_puzzle_index]
+	var puzzle_index: int = game.current_puzzle_index
+	var puzzle: Dictionary = game.puzzles[puzzle_index]
 	game.actions_left = maxi(game.actions_left - 1, 0)
 
 	if index == int(puzzle["correct"]):
-		var reward = float(puzzle["reward"])
+		var reward := float(puzzle["reward"])
 		game.repair_progress = minf(100.0, game.repair_progress + reward)
-		var stage_message = update_repair_stage_progress()
+		var stage_message := update_repair_stage_progress()
 		game.status_line = "Đúng rồi. Tiến độ sửa tàu +%d%%." % int(reward)
 		if stage_message != "":
 			game.status_line += " " + stage_message
-		game.ai_controller.log_ai(
-			"Hệ thống", "Giải đúng câu đố. Lập luận tài nguyên tốt.", "system"
-		)
+		_apply_mission_updates(game.mission_controller.notify_puzzle_solved(puzzle_index))
+		_apply_mission_updates(game.mission_controller.notify_repair_progress(game.repair_progress))
+		game.ai_controller.log_ai("Hệ thống", "Giải đúng câu đố. Tiến trình được mở rộng.", "system")
 		game.current_puzzle_index += 1
 	else:
-		game.hp = clampf(game.hp - 6.0, 0.0, game.SurvivalSystem.HP_MAX)
-		game.status_line = "Sai đáp án. HP -6."
+		game.hp = clampf(game.hp - 8.0, 0.0, game.SurvivalSystem.HP_MAX)
+		game.status_line = "Sai đáp án. HP -8."
 		game.ai_controller.log_ai("AI", "Gợi ý: %s" % str(puzzle["hint"]), "offline")
 
 	game.puzzle_open = false
@@ -515,12 +502,12 @@ func on_puzzle_choice(index: int) -> void:
 
 
 func update_repair_stage_progress() -> String:
-	var combined_message = ""
+	var combined_message := ""
 	while game.repair_stage_index < game.repair_stages.size():
 		var stage: Dictionary = game.repair_stages[game.repair_stage_index]
 		if game.repair_progress < float(stage.get("threshold", 100.0)):
 			break
-		var msg = "Đạt mốc sửa tàu: %s" % str(stage.get("name", "Không rõ"))
+		var msg := "Đạt mốc sửa tàu: %s" % str(stage.get("name", "Không rõ"))
 		if combined_message != "":
 			combined_message += " | "
 		combined_message += msg
@@ -547,7 +534,7 @@ func set_win() -> void:
 	game.game_over = true
 	game.win = true
 	game.death_reason = ""
-	game.status_line = "CHIẾN THẮNG: Bạn đã sửa tàu trước khi hệ thống sụp đổ."
+	game.status_line = "CHIẾN THẮNG: Bạn đã sửa tàu và kích hoạt escape thành công."
 	game.ai_controller.log_ai("Hệ thống", game.status_line, "system")
 
 
@@ -555,12 +542,27 @@ func current_stage_goal_text() -> String:
 	if game.repair_stage_index >= game.repair_stages.size():
 		return "Đã hoàn thành toàn bộ mốc sửa tàu."
 	var stage: Dictionary = game.repair_stages[game.repair_stage_index]
-	return (
-		"%s (muc tieu %.0f%%)" % [str(stage.get("name", "")), float(stage.get("threshold", 100.0))]
+	var required_items: Array[String] = game.GameData.required_terminal_items_for_stage(
+		game.repair_stage_index
 	)
+	if required_items.is_empty():
+		return "%s (mục tiêu %.0f%%)" % [str(stage.get("name", "")), float(stage.get("threshold", 100.0))]
+	return "%s (cần: %s)" % [str(stage.get("name", "")), ", ".join(required_items)]
 
 
 func current_puzzle_hint() -> String:
 	if game.current_puzzle_index < game.puzzles.size():
 		return str(game.puzzles[game.current_puzzle_index]["hint"])
 	return "Hiện không còn câu đố mở."
+
+
+func _apply_mission_updates(messages: Array[String]) -> void:
+	if messages.is_empty():
+		return
+
+	var mission_line := "Nhiệm vụ: " + " | ".join(messages)
+	if game.status_line == "":
+		game.status_line = mission_line
+	else:
+		game.status_line += "\n" + mission_line
+	game.ai_controller.log_ai("Hệ thống", mission_line, "system")

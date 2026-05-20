@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EVENT_CHANCE := 0.60
+const EVENT_CHANCE := 0.45
 
 
 static func roll_event(rng: RandomNumberGenerator, state: Dictionary) -> Dictionary:
@@ -17,38 +17,38 @@ static func roll_event(rng: RandomNumberGenerator, state: Dictionary) -> Diction
 			"id": "oxygen_leak",
 			"title": "Rò rỉ oxy",
 			"description": "Van phụ bị rò rỉ, oxy thất thoát mạnh.",
-			"o2": -12.0
+			"o2": -10.0
 		},
 		{
 			"id": "cold_wave",
 			"title": "Sụt nhiệt",
 			"description": "Lớp cách nhiệt suy giảm, khoang lạnh đi nhanh.",
-			"temp": -7.0
+			"temp": -6.0
 		},
 		{
 			"id": "short_circuit",
 			"title": "Chập mạch",
 			"description": "Cụm dây nguồn bị chập, pin tiêu hao thêm.",
-			"battery": -10.0
+			"battery": -8.0
 		},
 		{
 			"id": "water_contamination",
 			"title": "Nước nhiễm bẩn",
-			"description": "Bộ lọc tạm thời mất hiệu lực, có thể mất nước nhanh hơn.",
-			"hydration": -10.0
+			"description": "Bộ lọc tạm thời mất hiệu lực, nước giảm nhanh hơn.",
+			"hydration": -8.0
 		},
 		{
 			"id": "ration_spoilage",
 			"title": "Khẩu phần hỏng",
 			"description": "Một phần thực phẩm bị hỏng do dao động nhiệt.",
-			"satiety": -10.0
+			"satiety": -8.0
 		},
 		{
 			"id": "supply_cache",
 			"title": "Kho dự phòng",
 			"description": "Tìm thấy kho tiếp tế cũ: thêm pin và nước.",
-			"battery": 8.0,
-			"hydration": 6.0
+			"battery": 6.0,
+			"hydration": 5.0
 		}
 	]
 

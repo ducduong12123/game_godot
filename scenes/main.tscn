@@ -1,7 +1,15 @@
-[gd_scene format=3 uid="uid://bf5kdmdrpk8lt"]
+[gd_scene load_steps=3 format=3 uid="uid://bf5kdmdrpk8lt"]
 
 [ext_resource type="Script" uid="uid://dfqgudnu800u7" path="res://scripts/main.gd" id="1_m5m8h"]
+[ext_resource type="PackedScene" path="res://scenes/node_2d_first.tscn" id="2_0x6tf"]
 
 [node name="Main" type="Node2D" unique_id=1446013179]
-position = Vector2(-3685, -377)
 script = ExtResource("1_m5m8h")
+
+[node name="MapVisual" parent="." instance=ExtResource("2_0x6tf")]
+z_index = -10
+show_behind_parent = true
+
+[node name="GameplayCamera" type="Camera2D" parent="."]
+enabled = true
+zoom = Vector2(1.1, 1.1)

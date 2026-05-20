@@ -7,7 +7,12 @@ const HP_MAX := 100.0
 
 
 static func allocation_total(allocation: Dictionary) -> int:
-	return int(allocation.get("heater", 0)) + int(allocation.get("oxygen", 0)) + int(allocation.get("water", 0)) + int(allocation.get("food", 0))
+	return (
+		int(allocation.get("heater", 0))
+		+ int(allocation.get("oxygen", 0))
+		+ int(allocation.get("water", 0))
+		+ int(allocation.get("food", 0))
+	)
 
 
 static func allocation_valid(allocation: Dictionary, battery_now: float) -> bool:
@@ -48,8 +53,8 @@ static func apply_turn(state: Dictionary, allocation: Dictionary) -> Dictionary:
 	next_state["battery"] = maxf(battery_now - use_total, 0.0)
 	next_state["o2"] = clampf(o2_now + 2.0 * oxygen - 6.0, 0.0, 100.0)
 	next_state["temp"] = clampf(temp_now + 1.6 * heater - 0.1 * (temp_now - ambient_temp), -40.0, 60.0)
-	next_state["hydration"] = clampf(hydration_now + 2.2 * water - 7.0, 0.0, 100.0)
-	next_state["satiety"] = clampf(satiety_now + 1.8 * food - 6.0, 0.0, 100.0)
+	next_state["hydration"] = clampf(hydration_now + 2.0 * water - 6.5, 0.0, 100.0)
+	next_state["satiety"] = clampf(satiety_now + 1.6 * food - 5.5, 0.0, 100.0)
 
 	var damage := 0.0
 	if float(next_state["o2"]) < 18.0:
@@ -59,9 +64,9 @@ static func apply_turn(state: Dictionary, allocation: Dictionary) -> Dictionary:
 	if float(next_state["temp"]) > 32.0:
 		damage += (float(next_state["temp"]) - 32.0) * 0.6
 	if float(next_state["hydration"]) < 25.0:
-		damage += (25.0 - float(next_state["hydration"])) * 0.9
+		damage += (25.0 - float(next_state["hydration"])) * 0.8
 	if float(next_state["satiety"]) < 20.0:
-		damage += (20.0 - float(next_state["satiety"])) * 0.8
+		damage += (20.0 - float(next_state["satiety"])) * 0.7
 
 	next_state["hp"] = clampf(hp_now - damage, 0.0, HP_MAX)
 	next_state["damage"] = damage
@@ -71,13 +76,13 @@ static func apply_turn(state: Dictionary, allocation: Dictionary) -> Dictionary:
 
 	if float(next_state["o2"]) <= 0.0:
 		next_state["game_over"] = true
-		next_state["death_reason"] = "Oxy đã cạn."
+		next_state["death_reason"] = "Oxy da can."
 	elif float(next_state["hp"]) <= 0.0:
 		next_state["game_over"] = true
-		next_state["death_reason"] = "Phi hành gia gục ngã do cân bằng sinh tồn kém."
+		next_state["death_reason"] = "Phi hanh gia guc nga do can bang sinh ton kem."
 	elif float(next_state["battery"]) <= 0.0 and repair_progress < 100.0:
 		next_state["game_over"] = true
-		next_state["death_reason"] = "Pin cạn trước khi sửa xong phi thuyền."
+		next_state["death_reason"] = "Pin can truoc khi sua xong phi thuyen."
 	elif repair_progress >= 100.0:
 		next_state["game_over"] = true
 		next_state["win"] = true
@@ -86,4 +91,9 @@ static func apply_turn(state: Dictionary, allocation: Dictionary) -> Dictionary:
 
 
 static func next_actions_budget(o2: float, hydration: float, satiety: float) -> int:
-	return clampi(int(floor((o2 + hydration + satiety) / 85.0)), 1, 4)
+	var total := o2 + hydration + satiety
+	if total >= 160.0:
+		return 3
+	if total >= 95.0:
+		return 2
+	return 1

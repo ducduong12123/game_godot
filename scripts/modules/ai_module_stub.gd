@@ -8,38 +8,52 @@ func setup(game_ref) -> void:
 
 
 func init_http() -> void:
-	# Stub: no HTTP.
 	pass
 
 
 func load_ai_config() -> void:
-	# Stub: keep UI consistent.
 	game.ai_api_key = ""
 	game.ai_model = game.AITutorService.DEFAULT_MODEL
-	if game.ai_key_input != null:
-		game.ai_key_input.text = ""
 
 
 func on_save_key_pressed() -> void:
-	log_ai(
-		"Hệ thống",
-		"AI stub đang bật (không hỗ trợ Gemini).",
-		"system"
-	)
+	pass
 
 
 func on_ask_ai_pressed() -> void:
-	ask_ai_topic("formula")
+	var user_question := ""
+	if game.ai_prompt_input != null:
+		user_question = game.ai_prompt_input.text.strip_edges()
+	if user_question == "":
+		user_question = "Tôi nên làm gì tiếp theo?"
+	ask_ai_question(user_question)
 
 
 func ask_ai_topic(topic: String) -> void:
+	var question := "Tôi nên làm gì tiếp theo?"
+	match topic:
+		"formula":
+			question = "Giải thích công thức sinh tồn hiện tại."
+		"risk":
+			question = "Phân tích rủi ro cao nhất lúc này."
+		"allocation":
+			question = "Gợi ý cách phân bổ pin."
+		"puzzle":
+			question = "Gợi ý câu đố hiện tại."
+	ask_ai_question(question)
+
+
+func ask_ai_question(user_question: String) -> void:
 	if game == null or game.ai_log == null:
 		return
 	var hint := ""
 	if game.gameplay_controller != null:
 		hint = game.gameplay_controller.current_puzzle_hint()
-	var fallback: String = game.AITutorService.offline_answer(topic, hint)
+	var fallback: String = game.AITutorService.offline_answer(user_question, hint)
+	log_ai("Bạn", user_question, "user")
 	log_ai("AI", fallback + "\n(ngoại tuyến - AI stub)", "offline")
+	if game.ai_prompt_input != null:
+		game.ai_prompt_input.text = ""
 
 
 func on_http_request_completed(

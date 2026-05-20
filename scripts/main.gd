@@ -9,6 +9,7 @@ const AITutorService = preload("res://scripts/systems/ai_tutor_service.gd")
 
 const WorldModule = preload("res://scripts/modules/world_module.gd")
 const GameplayModule = preload("res://scripts/modules/gameplay_module.gd")
+const MissionModule = preload("res://scripts/modules/mission_module.gd")
 const UIModule = preload("res://scripts/modules/ui_module.gd")
 const AIModuleStub = preload("res://scripts/modules/ai_module_stub.gd")
 
@@ -43,7 +44,7 @@ var last_event_description := "Chưa có sự cố nào."
 
 var allocation := {"heater": 0, "oxygen": 0, "water": 0, "food": 0}
 
-var player_pos := Vector2(120, 120)
+var player_pos := Vector2(-1730, -455)
 var player_speed := 240.0
 var terminal_pos := MapData.TERMINAL_POS
 var near_item_index := -1
@@ -77,10 +78,14 @@ var craft_recipe_option: OptionButton
 var craft_recipe_desc_label: Label
 var prompt_label: Label
 var objective_label: Label
+var mission_panel: Panel
+var mission_detail_label: RichTextLabel
+var hud_panels_root: Control
+var hud_toggle_button: Button
 
+var ai_overlay: Panel
 var ai_state_label: Label
-var ai_key_input: LineEdit
-var ai_topic_option: OptionButton
+var ai_prompt_input: TextEdit
 var ai_log: RichTextLabel
 
 var puzzle_panel: Panel
@@ -90,12 +95,15 @@ var start_overlay: ColorRect
 var rules_popup: Panel
 var rules_popup_text: RichTextLabel
 var http: HTTPRequest
+var gameplay_camera: Camera2D
 
 var world_controller := WorldModule.new()
 var gameplay_controller := GameplayModule.new()
+var mission_controller := MissionModule.new()
 var ui_controller := UIModule.new()
 var ai_controller = null
 var _draw_debug_once := false
+var external_map_root: Node = null
 
 
 func _ready() -> void:
@@ -103,14 +111,15 @@ func _ready() -> void:
 	print("[main] renderer=", RenderingServer.get_current_rendering_method())
 	rng.randomize()
 	_ensure_input_actions()
+	_setup_external_map()
 
 	world_controller.setup(self)
 	gameplay_controller.setup(self)
+	mission_controller.setup(self)
 	ui_controller.setup(self)
 	ui_controller.build_ui()
 	print("[main] UI built")
 
-	# Build UI first so a broken AI module can't blank-screen the whole game.
 	ai_controller = _create_ai_controller()
 	ai_controller.setup(self)
 	ai_controller.init_http()
@@ -123,39 +132,57 @@ func _ready() -> void:
 	ui_controller.show_start_overlay()
 	print("[main] overlay shown, queue redraw")
 
-	ai_controller.log_ai(
-		"Hệ thống",
-		"Trợ giảng đã sẵn sàng. Dùng nút Hỏi AI hoặc phím tắt H/J/K/L.",
-		"system"
-	)
+	ai_controller.log_ai("Hệ thống", "Trợ lý AI đã sẵn sàng. Nhấn Ctrl để mở khung hỏi đáp.", "system")
 	if ai_api_key.strip_edges() == "":
 		ai_controller.log_ai(
-			"Hệ thống", "Gemini đang ngoại tuyến (chưa có API key).", "system"
+			"Hệ thống", "AI đang ngoại tuyến. Có thể thêm GROQ_API_KEY trong file .env.", "system"
 		)
 	else:
-		ai_controller.log_ai(
-			"Hệ thống", "Gemini trực tuyến | model: %s" % ai_model, "system"
-		)
+		ai_controller.log_ai("Hệ thống", "AI trực tuyến và sẵn sàng trả lời.", "system")
 
+	_update_camera()
 	queue_redraw()
 
 
+func _setup_external_map() -> void:
+	external_map_root = get_node_or_null("MapVisual")
+	gameplay_camera = get_node_or_null("GameplayCamera")
+	if external_map_root == null:
+		return
+
+	var test_player := external_map_root.get_node_or_null("PlayerTest")
+	if test_player != null:
+		test_player.queue_free()
+
+
+func _update_camera() -> void:
+	if gameplay_camera != null:
+		gameplay_camera.position = player_pos
+
+
 func _create_ai_controller():
-	# Use runtime load so the project can still open even if ai_module.gd fails to load
-	# (version mismatch, parse error, missing file, etc.).
 	var script_res = load("res://scripts/modules/ai_module.gd")
 	if script_res == null or script_res is not Script:
 		push_error("AI module failed to load. Falling back to stub (offline only).")
 		return AIModuleStub.new()
 
-	# `load()` returns a Script *resource* (not a class reference like `preload()`),
-	# so we attach it to a base RefCounted instance.
 	var controller := RefCounted.new()
 	controller.set_script(script_res)
 	return controller
 
 
 func _process(delta: float) -> void:
+	if Input.is_action_just_pressed("toggle_ai"):
+		_on_toggle_ai_pressed()
+		ui_controller.update_prompt_label()
+		return
+
+	if _ai_overlay_is_open():
+		ui_controller.update_prompt_label()
+		_update_camera()
+		queue_redraw()
+		return
+
 	if not mission_started:
 		if (
 			Input.is_action_just_pressed("ui_accept")
@@ -168,18 +195,13 @@ func _process(delta: float) -> void:
 
 	if not game_over and not puzzle_open:
 		var move := Vector2.ZERO
-		var move_left := _is_move_left()
-		var move_right := _is_move_right()
-		var move_up := _is_move_up()
-		var move_down := _is_move_down()
-
-		if move_left:
+		if _is_move_left():
 			move.x -= 1.0
-		if move_right:
+		if _is_move_right():
 			move.x += 1.0
-		if move_up:
+		if _is_move_up():
 			move.y -= 1.0
-		if move_down:
+		if _is_move_down():
 			move.y += 1.0
 
 		if move.length() > 0.0:
@@ -198,9 +220,14 @@ func _process(delta: float) -> void:
 		ai_controller.ask_ai_topic("allocation")
 	if Input.is_action_just_pressed("ai_puzzle"):
 		ai_controller.ask_ai_topic("puzzle")
+	if Input.is_action_just_pressed("toggle_hud"):
+		_on_toggle_hud_pressed()
+	if Input.is_action_just_pressed("toggle_mission"):
+		_on_toggle_mission_pressed()
 
 	world_controller.update_near_item()
 	ui_controller.update_prompt_label()
+	_update_camera()
 	queue_redraw()
 
 
@@ -253,6 +280,9 @@ func _ensure_input_actions() -> void:
 	_ensure_action("move_up", KEY_UP)
 	_ensure_action("move_down", KEY_DOWN)
 	_ensure_action("interact", KEY_E)
+	_ensure_action("toggle_hud", KEY_TAB)
+	_ensure_action("toggle_mission", KEY_SHIFT)
+	_ensure_action("toggle_ai", KEY_CTRL)
 	_ensure_action("ai_formula", KEY_H)
 	_ensure_action("ai_risk", KEY_J)
 	_ensure_action("ai_alloc", KEY_K)
@@ -328,3 +358,32 @@ func _on_http_request_completed(
 	result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray
 ) -> void:
 	ai_controller.on_http_request_completed(result, response_code, headers, body)
+
+
+func _on_toggle_hud_pressed() -> void:
+	if hud_panels_root == null or hud_toggle_button == null:
+		return
+
+	hud_panels_root.visible = not hud_panels_root.visible
+	hud_toggle_button.text = "Ẩn HUD" if hud_panels_root.visible else "Hiện HUD"
+
+
+func _on_toggle_mission_pressed() -> void:
+	if mission_panel == null:
+		return
+	mission_panel.visible = not mission_panel.visible
+
+
+func _on_toggle_ai_pressed() -> void:
+	if ai_overlay == null:
+		return
+	var next_visible := not ai_overlay.visible
+	ai_overlay.visible = next_visible
+	if next_visible and ai_prompt_input != null:
+		ai_prompt_input.grab_focus()
+	elif ai_prompt_input != null and get_viewport().gui_get_focus_owner() == ai_prompt_input:
+		get_viewport().gui_release_focus()
+
+
+func _ai_overlay_is_open() -> bool:
+	return ai_overlay != null and ai_overlay.visible

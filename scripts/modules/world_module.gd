@@ -10,15 +10,17 @@ func setup(game_ref) -> void:
 
 
 func draw() -> void:
-	_draw_background()
-	_draw_rooms()
-	_draw_grid()
-	_draw_walls()
+	if game.external_map_root == null:
+		_draw_background()
+		_draw_rooms()
+		_draw_grid()
+		_draw_walls()
+		_draw_room_labels()
+
 	_draw_doors()
 	_draw_terminal()
 	_draw_items()
 	_draw_player()
-	_draw_room_labels()
 
 
 func try_move_player(delta_move: Vector2) -> void:
@@ -39,6 +41,9 @@ func try_move_player(delta_move: Vector2) -> void:
 
 
 func _can_move_to(next_pos: Vector2) -> bool:
+	if game.external_map_root != null:
+		return true
+
 	if _crosses_wall(game.player_pos, next_pos, game.MapData.WALL_X, true):
 		return false
 	if _crosses_wall(game.player_pos, next_pos, game.MapData.WALL_Y, false):
@@ -51,7 +56,10 @@ func _crosses_wall(from_pos: Vector2, to_pos: Vector2, wall_line: float, is_vert
 	var to_coord := to_pos.x if is_vertical else to_pos.y
 	if is_equal_approx(from_coord, to_coord):
 		return false
-	var crossed := (from_coord < wall_line and to_coord >= wall_line) or (from_coord > wall_line and to_coord <= wall_line)
+	var crossed := (
+		(from_coord < wall_line and to_coord >= wall_line)
+		or (from_coord > wall_line and to_coord <= wall_line)
+	)
 	if not crossed:
 		return false
 	var t: float = (wall_line - from_coord) / (to_coord - from_coord)
@@ -221,14 +229,16 @@ func _draw_items() -> void:
 
 func _item_color_for_type(item_type: String) -> Color:
 	match item_type:
-		"battery":
-			return Color(0.48, 0.90, 0.58)
 		"key":
 			return Color(0.95, 0.66, 0.30)
 		"material":
 			return Color(0.82, 0.62, 0.96)
-		_:
+		"consumable":
+			return Color(0.48, 0.90, 0.58)
+		"repair":
 			return Color(0.50, 0.82, 0.97)
+		_:
+			return Color(0.80, 0.80, 0.85)
 
 
 func _draw_player() -> void:

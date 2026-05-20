@@ -1,83 +1,95 @@
 extends RefCounted
 
-const WORLD_RECT := Rect2(20, 20, 700, 680)
-const WALL_X := 370.0
-const WALL_Y := 360.0
-const TERMINAL_POS := Vector2(620, 520)
+const WORLD_RECT := Rect2(-2420, -1090, 2540, 1040)
+const WALL_X := -960.0
+const WALL_Y := -520.0
+const TERMINAL_POS := Vector2(-450, -470)
 
 
 static func room_rects() -> Array:
 	return [
 		{
-			"id": "bridge",
-			"name": "Khoang chỉ huy",
-			"rect": Rect2(20, 20, 350, 340),
-			"color": Color(0.09, 0.17, 0.30, 0.80)
+			"id": "specimen",
+			"name": "Khoang mẫu vật",
+			"rect": Rect2(-2360, -1030, 760, 450),
+			"color": Color(0.24, 0.18, 0.26, 0.72)
 		},
 		{
-			"id": "life_support",
-			"name": "Khoang hỗ trợ sống",
-			"rect": Rect2(370, 20, 350, 340),
-			"color": Color(0.10, 0.22, 0.27, 0.80)
+			"id": "archive",
+			"name": "Khoang lưu trữ",
+			"rect": Rect2(-1600, -1030, 520, 450),
+			"color": Color(0.12, 0.26, 0.24, 0.72)
 		},
 		{
-			"id": "hydroponics",
-			"name": "Khoang thủy canh",
-			"rect": Rect2(20, 360, 350, 340),
-			"color": Color(0.10, 0.24, 0.19, 0.80)
+			"id": "medlab",
+			"name": "Khoang y sinh",
+			"rect": Rect2(-1040, -1070, 970, 520),
+			"color": Color(0.16, 0.26, 0.34, 0.72)
 		},
 		{
-			"id": "engineering",
-			"name": "Khoang kỹ thuật",
-			"rect": Rect2(370, 360, 350, 340),
-			"color": Color(0.18, 0.16, 0.29, 0.80)
+			"id": "hallway",
+			"name": "Hành lang chính",
+			"rect": Rect2(-2360, -600, 1770, 290),
+			"color": Color(0.16, 0.20, 0.28, 0.52)
+		},
+		{
+			"id": "operations",
+			"name": "Khoang điều phối",
+			"rect": Rect2(-650, -610, 330, 290),
+			"color": Color(0.18, 0.24, 0.22, 0.72)
+		},
+		{
+			"id": "decon",
+			"name": "Buồng khử nhiễm",
+			"rect": Rect2(-300, -700, 440, 420),
+			"color": Color(0.28, 0.26, 0.18, 0.72)
 		}
 	]
 
 
 static func create_doors() -> Dictionary:
 	return {
-		"door_bridge_life":
+		"door_archive_medlab":
 		{
-			"id": "door_bridge_life",
-			"name": "Cửa A1",
-			"orientation": "vertical",
-			"line": WALL_X,
-			"start": 150.0,
-			"end": 210.0,
-			"required_item": "Thẻ kỹ thuật",
-			"unlocked": false
-		},
-		"door_hydro_engineering":
-		{
-			"id": "door_hydro_engineering",
-			"name": "Cửa B2",
-			"orientation": "vertical",
-			"line": WALL_X,
-			"start": 505.0,
-			"end": 565.0,
-			"required_item": "Cầu chì áp suất",
-			"unlocked": false
-		},
-		"door_bridge_hydro":
-		{
-			"id": "door_bridge_hydro",
-			"name": "Cửa C1",
+			"id": "door_archive_medlab",
+			"name": "Cua A1",
 			"orientation": "horizontal",
-			"line": WALL_Y,
-			"start": 160.0,
-			"end": 220.0,
+			"line": -590.0,
+			"start": -1230.0,
+			"end": -1110.0,
+			"required_item": "Level 1 Access Card",
+			"unlocked": false
+		},
+		"door_hall_decon":
+		{
+			"id": "door_hall_decon",
+			"name": "Cua B2",
+			"orientation": "vertical",
+			"line": -300.0,
+			"start": -610.0,
+			"end": -480.0,
+			"required_item": "Engineer Log",
+			"unlocked": false
+		},
+		"door_specimen_hall":
+		{
+			"id": "door_specimen_hall",
+			"name": "Cua C1",
+			"orientation": "horizontal",
+			"line": -600.0,
+			"start": -1880.0,
+			"end": -1760.0,
 			"required_item": "",
 			"unlocked": true
 		},
-		"door_life_engineering":
+		"door_ops_decon":
 		{
-			"id": "door_life_engineering",
-			"name": "Cửa C2",
-			"orientation": "horizontal",
-			"line": WALL_Y,
-			"start": 520.0,
-			"end": 580.0,
+			"id": "door_ops_decon",
+			"name": "Cua C2",
+			"orientation": "vertical",
+			"line": -320.0,
+			"start": -520.0,
+			"end": -420.0,
 			"required_item": "",
 			"unlocked": true
 		}
