@@ -1,15 +1,132 @@
-[gd_scene load_steps=3 format=3 uid="uid://bf5kdmdrpk8lt"]
+[gd_scene format=3 uid="uid://bf5kdmdrpk8lt"]
 
 [ext_resource type="Script" uid="uid://dfqgudnu800u7" path="res://scripts/main.gd" id="1_m5m8h"]
-[ext_resource type="PackedScene" path="res://scenes/node_2d_first.tscn" id="2_0x6tf"]
+[ext_resource type="PackedScene" uid="uid://cnklo0teivm57" path="res://scenes/node_2d_first.tscn" id="2_0x6tf"]
+[ext_resource type="Texture2D" uid="uid://chdgo3grrkxhu" path="res://assets/custom_sprites/level_1_access_card.png" id="3_access"]
+[ext_resource type="Texture2D" uid="uid://ckx8w23v8d0qx" path="res://assets/custom_sprites/engineer_log.png" id="4_log"]
+[ext_resource type="Texture2D" uid="uid://b5pl4fuail1we" path="res://assets/custom_sprites/backup_battery.png" id="5_battery"]
+[ext_resource type="Texture2D" uid="uid://y4mdova7pdxb" path="res://assets/custom_sprites/portable_oxygen.png" id="6_oxygen"]
+[ext_resource type="Texture2D" uid="uid://bsj3llfk8yypx" path="res://assets/custom_sprites/bio_gel.png" id="7_biogel"]
+[ext_resource type="Texture2D" uid="uid://c4v87uu6n1y5w" path="res://assets/custom_sprites/air_filter_module.png" id="8_filter"]
+[ext_resource type="Texture2D" uid="uid://bjb8dv8qifmrl" path="res://assets/custom_sprites/alloy_plate.png" id="9_alloy"]
+[ext_resource type="Texture2D" uid="uid://c5v7q3kus2y5x" path="res://assets/custom_sprites/electrolyte_pack.png" id="10_electrolyte"]
+[ext_resource type="Texture2D" uid="uid://bt4rqgpteu2s2" path="res://assets/custom_sprites/superconductor_wire.png" id="11_wire"]
+[ext_resource type="Texture2D" uid="uid://5e482yhyy4r7" path="res://assets/custom_sprites/door_locked.png" id="13_door_locked"]
+[ext_resource type="Texture2D" uid="uid://bhsd4osir7ue3" path="res://assets/custom_sprites/door_open.png" id="14_door_open"]
+[ext_resource type="Texture2D" uid="uid://qqy7bfven6td" path="res://assets/custom_sprites/terminal.png" id="15_terminal"]
+[ext_resource type="Texture2D" uid="uid://gybxpuobet7c" path="res://assets/custom_sprites/player_idle_down.png" id="16_player_down"]
 
 [node name="Main" type="Node2D" unique_id=1446013179]
+position = Vector2(-859, -282)
 script = ExtResource("1_m5m8h")
 
-[node name="MapVisual" parent="." instance=ExtResource("2_0x6tf")]
-z_index = -10
+[node name="MapVisual" parent="." unique_id=2140696456 instance=ExtResource("2_0x6tf")]
 show_behind_parent = true
+z_index = -10
 
-[node name="GameplayCamera" type="Camera2D" parent="."]
-enabled = true
+[node name="GameplayCamera" type="Camera2D" parent="." unique_id=725481818]
+position = Vector2(-205, -131)
 zoom = Vector2(1.1, 1.1)
+
+[node name="WorldObjects" type="Node2D" parent="." unique_id=373681227]
+z_index = 20
+position = Vector2(-210, -62)
+
+[node name="Items" type="Node2D" parent="WorldObjects" unique_id=283893210]
+z_index = 20
+position = Vector2(49, -10)
+
+[node name="Item_Level1AccessCard" type="Sprite2D" parent="WorldObjects/Items" unique_id=1163648980]
+position = Vector2(-1647, -377)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("3_access")
+
+[node name="Item_EngineerLog" type="Sprite2D" parent="WorldObjects/Items" unique_id=874609117]
+position = Vector2(-1985, -659)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("4_log")
+
+[node name="Item_BackupBattery" type="Sprite2D" parent="WorldObjects/Items" unique_id=1793448429]
+position = Vector2(-1428, -425)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("5_battery")
+
+[node name="Item_PortableOxygen" type="Sprite2D" parent="WorldObjects/Items" unique_id=1205125227]
+position = Vector2(-2256, -516)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("6_oxygen")
+
+[node name="Item_BioGel" type="Sprite2D" parent="WorldObjects/Items" unique_id=1019997864]
+position = Vector2(-560, -520)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("7_biogel")
+
+[node name="Item_AirFilterModule" type="Sprite2D" parent="WorldObjects/Items" unique_id=1140902065]
+position = Vector2(-140, -890)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("8_filter")
+
+[node name="Item_AlloyPlate_1" type="Sprite2D" parent="WorldObjects/Items" unique_id=1763186950]
+position = Vector2(-1027, -531)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("9_alloy")
+
+[node name="Item_AlloyPlate_2" type="Sprite2D" parent="WorldObjects/Items" unique_id=310025779]
+position = Vector2(-370, -620)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("9_alloy")
+
+[node name="Item_ElectrolytePack_1" type="Sprite2D" parent="WorldObjects/Items" unique_id=2139329675]
+position = Vector2(-2004, -383)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("10_electrolyte")
+
+[node name="Item_ElectrolytePack_2" type="Sprite2D" parent="WorldObjects/Items" unique_id=110914490]
+position = Vector2(-1051, -408)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("10_electrolyte")
+
+[node name="Item_SuperconductorWire_1" type="Sprite2D" parent="WorldObjects/Items" unique_id=419394669]
+position = Vector2(-1822, -397.00006)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("11_wire")
+
+[node name="Item_SuperconductorWire_2" type="Sprite2D" parent="WorldObjects/Items" unique_id=1640749294]
+position = Vector2(-230, -400)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("11_wire")
+
+[node name="Doors" type="Node2D" parent="WorldObjects" unique_id=1262366086]
+z_index = 18
+position = Vector2(-37, -20)
+
+[node name="Door_ArchiveMedlab" type="Sprite2D" parent="WorldObjects/Doors" unique_id=1833009418]
+position = Vector2(-842, -821)
+scale = Vector2(0.604, 1.1561667)
+texture = ExtResource("13_door_locked")
+
+[node name="Door_HallDecon" type="Sprite2D" parent="WorldObjects/Doors" unique_id=763395744]
+position = Vector2(-300, -545)
+scale = Vector2(0.604, 0.604)
+texture = ExtResource("13_door_locked")
+
+[node name="Door_SpecimenHall" type="Sprite2D" parent="WorldObjects/Doors" unique_id=1244292573]
+position = Vector2(-1197, -383.99997)
+scale = Vector2(0.604, 0.604)
+texture = ExtResource("14_door_open")
+
+[node name="Door_OpsDecon" type="Sprite2D" parent="WorldObjects/Doors" unique_id=1710847495]
+position = Vector2(-320, -470)
+scale = Vector2(0.604, 0.604)
+texture = ExtResource("14_door_open")
+
+[node name="Terminal" type="Sprite2D" parent="WorldObjects" unique_id=33591341]
+position = Vector2(-450, -470)
+scale = Vector2(0.65625, 0.65625)
+texture = ExtResource("15_terminal")
+
+[node name="Player" type="Sprite2D" parent="WorldObjects" unique_id=1613524994]
+z_index = 30
+position = Vector2(-1216, -515)
+scale = Vector2(0.5625, 0.5625)
+texture = ExtResource("16_player_down")
