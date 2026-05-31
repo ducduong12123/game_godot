@@ -9,6 +9,9 @@ static func roll_event(rng: RandomNumberGenerator, state: Dictionary) -> Diction
 			"triggered": false,
 			"title": "Ổn định",
 			"description": "Không có sự cố bất thường trong lượt này.",
+			"hint": "Tiếp tục theo dõi tài nguyên và ưu tiên nhiệm vụ gần nhất.",
+			"effect_text": "Không đổi tài nguyên",
+			"severity": "info",
 			"state": state.duplicate(true)
 		}
 
@@ -17,36 +20,54 @@ static func roll_event(rng: RandomNumberGenerator, state: Dictionary) -> Diction
 			"id": "oxygen_leak",
 			"title": "Rò rỉ oxy",
 			"description": "Van phụ bị rò rỉ, oxy thất thoát mạnh.",
-			"o2": -10.0
+			"hint": "Dùng Portable Oxygen nếu có, hoặc phân bổ thêm Oxy ở lượt tiếp theo.",
+			"effect_text": "O2 -12",
+			"severity": "danger",
+			"o2": -12.0
 		},
 		{
 			"id": "cold_wave",
 			"title": "Sụt nhiệt",
 			"description": "Lớp cách nhiệt suy giảm, khoang lạnh đi nhanh.",
-			"temp": -6.0
+			"hint": "Tăng phân bổ Máy sưởi trước khi nhiệt độ xuống vùng nguy hiểm.",
+			"effect_text": "Nhiệt độ -7 C",
+			"severity": "warning",
+			"temp": -7.0
 		},
 		{
 			"id": "short_circuit",
 			"title": "Chập mạch",
 			"description": "Cụm dây nguồn bị chập, pin tiêu hao thêm.",
-			"battery": -8.0
+			"hint": "Dùng Backup Battery nếu pin thấp, hoặc giảm phân bổ không cần thiết.",
+			"effect_text": "Pin -10",
+			"severity": "danger",
+			"battery": -10.0
 		},
 		{
 			"id": "water_contamination",
 			"title": "Nước nhiễm bẩn",
-			"description": "Bộ lọc tạm thời mất hiệu lực, nước giảm nhanh hơn.",
-			"hydration": -8.0
+			"description": "Bộ lọc tạm thời mất hiệu lực, nước cơ thể giảm nhanh.",
+			"hint": "Ưu tiên phân bổ Nước trong lượt tới để tránh mất HP.",
+			"effect_text": "Nước cơ thể -9",
+			"severity": "warning",
+			"hydration": -9.0
 		},
 		{
 			"id": "ration_spoilage",
 			"title": "Khẩu phần hỏng",
 			"description": "Một phần thực phẩm bị hỏng do dao động nhiệt.",
-			"satiety": -8.0
+			"hint": "Phân bổ Thức ăn nếu độ no đang thấp, đừng dồn toàn bộ pin vào sửa tàu.",
+			"effect_text": "Độ no -9",
+			"severity": "warning",
+			"satiety": -9.0
 		},
 		{
 			"id": "supply_cache",
 			"title": "Kho dự phòng",
 			"description": "Tìm thấy kho tiếp tế cũ: thêm pin và nước.",
+			"hint": "Đây là cơ hội tốt để đẩy tiến độ sửa tàu hoặc mở khu mới.",
+			"effect_text": "Pin +6, nước cơ thể +5",
+			"severity": "good",
 			"battery": 6.0,
 			"hydration": 5.0
 		}
@@ -63,8 +84,11 @@ static func roll_event(rng: RandomNumberGenerator, state: Dictionary) -> Diction
 
 	return {
 		"triggered": true,
-		"title": str(selected.get("title", "sự cố")),
+		"title": str(selected.get("title", "Sự cố")),
 		"description": str(selected.get("description", "")),
+		"hint": str(selected.get("hint", "")),
+		"effect_text": str(selected.get("effect_text", "")),
+		"severity": str(selected.get("severity", "warning")),
 		"state": next_state
 	}
 

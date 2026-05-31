@@ -4,6 +4,7 @@ const ALLOCATION_LIMIT_TOTAL := 12
 const ALLOCATION_LIMIT_EACH := 6
 const BATTERY_MAX := 110.0
 const HP_MAX := 100.0
+const DEMO_TIME_LIMIT_SEC := 480.0
 
 
 static func allocation_total(allocation: Dictionary) -> int:
@@ -76,18 +77,79 @@ static func apply_turn(state: Dictionary, allocation: Dictionary) -> Dictionary:
 
 	if float(next_state["o2"]) <= 0.0:
 		next_state["game_over"] = true
-		next_state["death_reason"] = "Oxy da can."
+		next_state["death_reason"] = "Oxy đã cạn."
 	elif float(next_state["hp"]) <= 0.0:
 		next_state["game_over"] = true
-		next_state["death_reason"] = "Phi hanh gia guc nga do can bang sinh ton kem."
+		next_state["death_reason"] = "Phi hành gia gục ngã do cân bằng sinh tồn quá thấp."
 	elif float(next_state["battery"]) <= 0.0 and repair_progress < 100.0:
 		next_state["game_over"] = true
-		next_state["death_reason"] = "Pin can truoc khi sua xong phi thuyen."
+		next_state["death_reason"] = "Pin cạn trước khi sửa xong phi thuyền."
 	elif repair_progress >= 100.0:
 		next_state["game_over"] = true
 		next_state["win"] = true
 
 	return next_state
+
+
+static func apply_realtime_pressure(state: Dictionary, delta: float, pressure_factor: float = 1.0) -> Dictionary:
+	var next_state := state.duplicate(true)
+	var dt := maxf(delta, 0.0) * maxf(pressure_factor, 0.0)
+
+	var battery_now := float(state.get("battery", BATTERY_MAX))
+	var temp_now := float(state.get("temp", 20.0))
+	var ambient_temp := float(state.get("ambient_temp", -30.0))
+	var o2_now := float(state.get("o2", 70.0))
+	var hydration_now := float(state.get("hydration", 75.0))
+	var satiety_now := float(state.get("satiety", 70.0))
+	var hp_now := float(state.get("hp", HP_MAX))
+
+	next_state["battery"] = clampf(battery_now - 0.030 * dt, 0.0, BATTERY_MAX)
+	next_state["o2"] = clampf(o2_now - 0.055 * dt, 0.0, 100.0)
+	next_state["hydration"] = clampf(hydration_now - 0.040 * dt, 0.0, 100.0)
+	next_state["satiety"] = clampf(satiety_now - 0.033 * dt, 0.0, 100.0)
+	next_state["temp"] = clampf(temp_now + (ambient_temp - temp_now) * 0.0025 * dt, -40.0, 60.0)
+
+	var damage := 0.0
+	if float(next_state["o2"]) < 16.0:
+		damage += (16.0 - float(next_state["o2"])) * 0.055 * dt
+	if float(next_state["temp"]) < 10.0:
+		damage += (10.0 - float(next_state["temp"])) * 0.018 * dt
+	if float(next_state["temp"]) < 6.0:
+		damage += (6.0 - float(next_state["temp"])) * 0.035 * dt
+	if float(next_state["hydration"]) < 18.0:
+		damage += (18.0 - float(next_state["hydration"])) * 0.035 * dt
+	if float(next_state["satiety"]) < 15.0:
+		damage += (15.0 - float(next_state["satiety"])) * 0.030 * dt
+
+	next_state["hp"] = clampf(hp_now - damage, 0.0, HP_MAX)
+	next_state["damage"] = damage
+	next_state["game_over"] = false
+	next_state["win"] = false
+	next_state["death_reason"] = ""
+
+	var loss := loss_reason(next_state)
+	if loss != "":
+		next_state["game_over"] = true
+		next_state["death_reason"] = loss
+
+	return next_state
+
+
+static func loss_reason(state: Dictionary) -> String:
+	var repair_progress := float(state.get("repair_progress", 0.0))
+	var elapsed_sec := float(state.get("mission_elapsed_sec", 0.0))
+
+	if repair_progress >= 100.0:
+		return ""
+	if float(state.get("o2", 0.0)) <= 0.0:
+		return "Oxy đã cạn. Phi hành gia không thể tiếp tục nhiệm vụ."
+	if float(state.get("hp", 0.0)) <= 0.0:
+		return "HP về 0. Phi hành gia gục ngã vì sinh tồn thất bại."
+	if float(state.get("battery", 0.0)) <= 0.0:
+		return "Pin đã cạn trước khi sửa xong phi thuyền."
+	if elapsed_sec >= DEMO_TIME_LIMIT_SEC:
+		return "Hết thời gian demo 8 phút trước khi sửa xong phi thuyền."
+	return ""
 
 
 static func next_actions_budget(o2: float, hydration: float, satiety: float) -> int:

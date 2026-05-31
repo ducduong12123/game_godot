@@ -2,7 +2,6 @@
 
 [ext_resource type="Texture2D" uid="uid://8myjtmpqu2w1" path="res://among-us-assets-main/Maps/room_science-sharedassets0.assets-90.png" id="1_66u6e"]
 [ext_resource type="Script" uid="uid://bf2hcphctkfw0" path="res://scripts/player_test.gd" id="2_vt2nw"]
-[ext_resource type="Texture2D" uid="uid://bqb071jkloa1n" path="res://among-us-assets-main/Players/Player-sharedassets0.assets-55.png" id="3_h1s2c"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_anfkw"]
 size = Vector2(1284, 213.2016)
@@ -50,7 +49,7 @@ size = Vector2(299, 54.5625)
 size = Vector2(300, 122)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_fti5y"]
-size = Vector2(428.5421, 179.20166)
+size = Vector2(292, 179.20166)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_7gjd1"]
 size = Vector2(167, 182)
@@ -151,7 +150,7 @@ position = Vector2(-1742.5421, -18.2016)
 shape = SubResource("RectangleShape2D_28tx3")
 
 [node name="CollisionShape2D24" type="CollisionShape2D" parent="StaticBody2D" unique_id=28572140]
-position = Vector2(-819.271, -499.60083)
+position = Vector2(-717, -503)
 shape = SubResource("RectangleShape2D_fti5y")
 
 [node name="CollisionShape2D25" type="CollisionShape2D" parent="StaticBody2D" unique_id=1969778125]
@@ -194,13 +193,6 @@ script = ExtResource("2_vt2nw")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerTest" unique_id=1959063731]
 position = Vector2(0, 18)
 shape = SubResource("CircleShape2D_ny2gr")
-
-[node name="Sprite2D" type="Sprite2D" parent="PlayerTest" unique_id=818297960]
-position = Vector2(0, -6)
-scale = Vector2(0.52, 0.52)
-texture = ExtResource("3_h1s2c")
-region_enabled = true
-region_rect = Rect2(0, 0, 128, 180)
 
 [node name="Camera2D" type="Camera2D" parent="PlayerTest" unique_id=1737139960]
 position = Vector2(0, -40)

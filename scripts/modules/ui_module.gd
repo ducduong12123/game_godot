@@ -70,7 +70,9 @@ func build_ui() -> void:
 	_build_ai_overlay(root)
 	_create_recipe_detail_popup(root)
 	_create_inventory_popup(root)
+	_create_event_toast(root)
 	_create_start_overlay(root)
+	_create_result_overlay(root)
 
 
 func _build_status_panel() -> void:
@@ -290,6 +292,62 @@ func _create_inventory_popup(root: Control) -> void:
 	inventory_popup.add_child(close_btn)
 
 
+func _create_event_toast(root: Control) -> void:
+	game.event_toast_panel = _create_panel(root, "Sự cố hệ thống", Rect2(24, 96, 470, 150))
+	game.event_toast_panel.visible = false
+
+	game.event_toast_text = RichTextLabel.new()
+	game.event_toast_text.position = Vector2(12, 34)
+	game.event_toast_text.size = Vector2(446, 104)
+	game.event_toast_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	game.event_toast_text.scroll_active = false
+	game.event_toast_text.bbcode_enabled = true
+	game.event_toast_panel.add_child(game.event_toast_text)
+
+
+func _create_result_overlay(root: Control) -> void:
+	game.result_overlay = ColorRect.new()
+	game.result_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	game.result_overlay.color = Color(0.0, 0.0, 0.0, 0.76)
+	game.result_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	game.result_overlay.visible = false
+	root.add_child(game.result_overlay)
+
+	var panel := Panel.new()
+	panel.size = Vector2(720, 390)
+	panel.position = Vector2(323, 170)
+	game.result_overlay.add_child(panel)
+
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.07, 0.09, 0.11, 0.95)
+	panel_style.border_color = Color(0.80, 0.88, 0.96, 0.45)
+	panel_style.set_border_width_all(1)
+	panel_style.set_corner_radius_all(6)
+	panel.add_theme_stylebox_override("panel", panel_style)
+
+	game.result_title_label = Label.new()
+	game.result_title_label.position = Vector2(20, 16)
+	game.result_title_label.size = Vector2(680, 38)
+	game.result_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	game.result_title_label.add_theme_font_size_override("font_size", 28)
+	panel.add_child(game.result_title_label)
+
+	game.result_detail_label = RichTextLabel.new()
+	game.result_detail_label.position = Vector2(24, 70)
+	game.result_detail_label.size = Vector2(672, 250)
+	game.result_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	game.result_detail_label.scroll_active = true
+	game.result_detail_label.bbcode_enabled = false
+	panel.add_child(game.result_detail_label)
+
+	var restart_hint := Label.new()
+	restart_hint.position = Vector2(24, 338)
+	restart_hint.size = Vector2(672, 30)
+	restart_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	restart_hint.text = "Nhấn F5 trong Godot để chạy lại màn chơi."
+	panel.add_child(restart_hint)
+
+
 func _make_alloc_row(container: VBoxContainer, title: String, key: String) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -429,6 +487,49 @@ func hide_start_overlay() -> void:
 		game.rules_popup.visible = false
 
 
+func show_event_toast(
+	title: String, description: String, effect_text: String, hint: String, severity: String
+) -> void:
+	if game.event_toast_panel == null or game.event_toast_text == null:
+		return
+
+	var color := "#F4D35E"
+	if severity == "danger":
+		color = "#FF8A80"
+	elif severity == "good":
+		color = "#8EDB8A"
+	elif severity == "info":
+		color = "#B7D6FF"
+
+	game.event_toast_text.text = (
+		"[color=%s][b]%s[/b][/color]\n%s\nẢnh hưởng: %s\nGợi ý: %s"
+		% [color, title, description, effect_text, hint]
+	)
+	game.event_toast_panel.visible = true
+	game.event_toast_timer = 6.0
+
+
+func hide_event_toast() -> void:
+	if game.event_toast_panel != null:
+		game.event_toast_panel.visible = false
+
+
+func show_result_overlay(is_win: bool, reason: String) -> void:
+	if game.result_overlay == null:
+		return
+
+	game.result_overlay.visible = true
+	if game.result_title_label != null:
+		game.result_title_label.text = "CHIẾN THẮNG" if is_win else "THUA CUỘC"
+	if game.result_detail_label != null:
+		game.result_detail_label.text = _result_detail_text(is_win, reason)
+
+
+func hide_result_overlay() -> void:
+	if game.result_overlay != null:
+		game.result_overlay.visible = false
+
+
 func _on_recipe_detail_pressed() -> void:
 	if recipe_detail_popup == null:
 		return
@@ -481,7 +582,7 @@ func update_ui() -> void:
 	var current_room: String = game.world_controller.room_name_at_player()
 	var summary := (
 		(
-			"Lượt %d/%d\nKhoang: %s\nPin: %.0f\nNhiệt độ: %.1f C\n"
+			"Lượt %d/%d\nThời gian còn lại: %s / 08:00\nKhoang: %s\nPin: %.0f\nNhiệt độ: %.1f C\n"
 			+ "Oxy: %.1f\nNước cơ thể: %.1f\nĐộ no: %.1f\nHP: %.1f\n"
 			+ "Lượt hành động: %d\nSửa tàu: %.0f%%\nMốc kỹ thuật: %s\n"
 			+ "Module: %s\nSự cố gần nhất: %s"
@@ -489,6 +590,7 @@ func update_ui() -> void:
 		% [
 			game.turn,
 			game.max_turns,
+			_remaining_time_text(),
 			current_room,
 			game.battery,
 			game.temp,
@@ -589,8 +691,44 @@ func _update_mission_panel() -> void:
 	lines.append(game.mission_controller.detail_text())
 	lines.append("")
 	lines.append("Tiến độ sửa tàu: %.0f%% | Lượt: %d/%d" % [game.repair_progress, game.turn, game.max_turns])
+	lines.append("Thời gian còn lại: %s / 08:00" % _remaining_time_text())
 	lines.append("Mốc kỹ thuật hiện tại: %s" % game.gameplay_controller.current_stage_goal_text())
+	if not game.event_log.is_empty():
+		lines.append("")
+		lines.append("Sự cố gần đây:")
+		for event_line in game.event_log:
+			lines.append("- %s" % event_line)
 	game.mission_detail_label.text = "\n".join(lines)
+
+
+func _result_detail_text(is_win: bool, reason: String) -> String:
+	var lines: PackedStringArray = []
+	if is_win:
+		lines.append("Bạn đã hoàn thành chuỗi sửa tàu và kích hoạt escape thành công.")
+	else:
+		lines.append("Lý do thất bại: %s" % reason)
+		lines.append("Gợi ý: kiểm soát tài nguyên sớm hơn, ưu tiên O2/HP/pin khi chúng xuống thấp, rồi mới đẩy tiến độ sửa tàu.")
+	lines.append("")
+	lines.append("Tiến độ sửa tàu: %.0f%%" % game.repair_progress)
+	lines.append("Thời gian đã dùng: %s / 08:00" % _format_time(game.mission_elapsed_sec))
+	lines.append("Lượt: %d/%d" % [game.turn, game.max_turns])
+	lines.append("Pin: %.0f | O2: %.1f | HP: %.1f" % [game.battery, game.o2, game.hp])
+	lines.append("Nhiệt độ: %.1f C | Nước: %.1f | Độ no: %.1f" % [game.temp, game.hydration, game.satiety])
+	if game.last_event_title != "":
+		lines.append("Sự cố gần nhất: %s" % game.last_event_title)
+	return "\n".join(lines)
+
+
+func _format_time(seconds: float) -> String:
+	var clamped := clampf(seconds, 0.0, game.SurvivalSystem.DEMO_TIME_LIMIT_SEC)
+	var total := int(floor(clamped))
+	var minutes := int(total / 60)
+	var secs := total % 60
+	return "%02d:%02d" % [minutes, secs]
+
+
+func _remaining_time_text() -> String:
+	return _format_time(game.SurvivalSystem.DEMO_TIME_LIMIT_SEC - game.mission_elapsed_sec)
 
 
 func _apply_ui_theme(root: Control) -> void:

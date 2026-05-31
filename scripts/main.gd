@@ -16,9 +16,14 @@ const AIModuleStub = preload("res://scripts/modules/ai_module_stub.gd")
 const WORLD_RECT := MapData.WORLD_RECT
 const INTERACT_RANGE := 42.0
 const AI_TIMEOUT_SEC := 12.0
+const DEMO_TIME_LIMIT_SEC := 480.0
 
 var turn := 1
 var max_turns := 18
+var mission_elapsed_sec := 0.0
+var realtime_event_timer := 0.0
+var realtime_ui_timer := 0.0
+var next_realtime_event_sec := 35.0
 
 var battery := SurvivalSystem.BATTERY_MAX
 var temp := 20.0
@@ -41,6 +46,10 @@ var status_line := StoryRules.WAITING_STATUS
 
 var last_event_title := "Ổn định"
 var last_event_description := "Chưa có sự cố nào."
+var last_event_hint := ""
+var last_event_effect_text := ""
+var event_log: Array[String] = []
+var event_toast_timer := 0.0
 
 var allocation := {"heater": 0, "oxygen": 0, "water": 0, "food": 0}
 
@@ -82,6 +91,11 @@ var mission_panel: Panel
 var mission_detail_label: RichTextLabel
 var hud_panels_root: Control
 var hud_toggle_button: Button
+var event_toast_panel: Panel
+var event_toast_text: RichTextLabel
+var result_overlay: ColorRect
+var result_title_label: Label
+var result_detail_label: RichTextLabel
 
 var ai_overlay: Panel
 var ai_state_label: Label
@@ -194,6 +208,13 @@ func _process(delta: float) -> void:
 		return
 
 	if not game_over and not puzzle_open:
+		gameplay_controller.update_realtime_pressure(delta)
+		if game_over:
+			ui_controller.update_prompt_label()
+			_update_camera()
+			queue_redraw()
+			return
+
 		var move := Vector2.ZERO
 		if _is_move_left():
 			move.x -= 1.0

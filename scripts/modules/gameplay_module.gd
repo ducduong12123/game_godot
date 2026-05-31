@@ -18,7 +18,17 @@ func ensure_mission_started() -> bool:
 
 func start_mission() -> void:
 	game.mission_started = true
+	game.mission_elapsed_sec = 0.0
+	game.realtime_event_timer = 0.0
+	game.realtime_ui_timer = 0.0
+	game.next_realtime_event_sec = 35.0
+	game.event_log.clear()
+	game.last_event_title = "Ổn định"
+	game.last_event_description = "Chưa có sự cố nào."
+	game.last_event_hint = ""
+	game.last_event_effect_text = ""
 	game.ui_controller.hide_start_overlay()
+	game.ui_controller.hide_result_overlay()
 	game.status_line = game.StoryRules.ACTIVE_STATUS
 	_apply_mission_updates(game.mission_controller.start_mission())
 	game.ui_controller.update_ui()
@@ -301,7 +311,6 @@ func on_apply_turn_pressed() -> void:
 		game.ui_controller.update_ui()
 		return
 
-	apply_random_event()
 	_apply_active_modules()
 	check_loss_from_resources("cuối lượt")
 	if game.game_over:
@@ -325,6 +334,49 @@ func on_apply_turn_pressed() -> void:
 	else:
 		game.status_line = "Bắt đầu lượt %d. Vừa qua: %s." % [game.turn, game.last_event_title]
 	game.ui_controller.update_ui()
+
+
+func update_realtime_pressure(delta: float) -> void:
+	if delta <= 0.0:
+		return
+	if not game.mission_started or game.game_over or game.puzzle_open:
+		return
+	if game._ai_overlay_is_open():
+		return
+
+	_update_event_toast_timer(delta)
+	game.mission_elapsed_sec = minf(
+		game.mission_elapsed_sec + delta, game.SurvivalSystem.DEMO_TIME_LIMIT_SEC
+	)
+	apply_realtime_result(
+		game.SurvivalSystem.apply_realtime_pressure(build_survival_state(), delta, 1.0)
+	)
+	if game.game_over:
+		game.ui_controller.update_ui()
+		return
+
+	game.realtime_event_timer += delta
+	if game.realtime_event_timer >= game.next_realtime_event_sec:
+		game.realtime_event_timer = 0.0
+		game.next_realtime_event_sec = 32.0 + game.rng.randf_range(0.0, 10.0)
+		apply_random_event()
+		check_loss_from_resources("sau sự cố")
+		if game.game_over:
+			game.ui_controller.update_ui()
+			return
+
+	game.realtime_ui_timer += delta
+	if game.realtime_ui_timer >= 0.25:
+		game.realtime_ui_timer = 0.0
+		game.ui_controller.update_ui()
+
+
+func _update_event_toast_timer(delta: float) -> void:
+	if game.event_toast_timer <= 0.0:
+		return
+	game.event_toast_timer = maxf(game.event_toast_timer - delta, 0.0)
+	if game.event_toast_timer <= 0.0:
+		game.ui_controller.hide_event_toast()
 
 
 func _apply_active_modules() -> void:
@@ -366,8 +418,21 @@ func build_survival_state() -> Dictionary:
 		"hydration": game.hydration,
 		"satiety": game.satiety,
 		"hp": game.hp,
-		"repair_progress": game.repair_progress
+		"repair_progress": game.repair_progress,
+		"mission_elapsed_sec": game.mission_elapsed_sec
 	}
+
+
+func apply_realtime_result(result: Dictionary) -> void:
+	game.battery = float(result.get("battery", game.battery))
+	game.temp = float(result.get("temp", game.temp))
+	game.o2 = float(result.get("o2", game.o2))
+	game.hydration = float(result.get("hydration", game.hydration))
+	game.satiety = float(result.get("satiety", game.satiety))
+	game.hp = float(result.get("hp", game.hp))
+
+	if bool(result.get("game_over", false)):
+		set_game_over(str(result.get("death_reason", "Hệ thống sinh tồn sụp đổ.")))
 
 
 func apply_survival_result(result: Dictionary) -> void:
@@ -404,12 +469,34 @@ func apply_random_event() -> void:
 
 	game.last_event_title = str(event_result.get("title", "Ổn định"))
 	game.last_event_description = str(event_result.get("description", ""))
+	game.last_event_hint = str(event_result.get("hint", ""))
+	game.last_event_effect_text = str(event_result.get("effect_text", ""))
 
 	if bool(event_result.get("triggered", false)):
-		game.status_line = "Sự cố: %s. %s" % [game.last_event_title, game.last_event_description]
+		game.status_line = "Sự cố: %s. %s Gợi ý: %s" % [
+			game.last_event_title,
+			game.last_event_description,
+			game.last_event_hint
+		]
+		var event_line := "%s | %s | %s" % [
+			game.last_event_title,
+			game.last_event_effect_text,
+			game.last_event_hint
+		]
+		game.event_log.push_front(event_line)
+		while game.event_log.size() > 5:
+			game.event_log.pop_back()
+		game.ui_controller.show_event_toast(
+			game.last_event_title,
+			game.last_event_description,
+			game.last_event_effect_text,
+			game.last_event_hint,
+			str(event_result.get("severity", "warning"))
+		)
 		game.ai_controller.log_ai(
 			"Hệ thống",
-			"Sự kiện lượt: %s - %s" % [game.last_event_title, game.last_event_description],
+			"Sự kiện: %s - %s Gợi ý: %s"
+			% [game.last_event_title, game.last_event_description, game.last_event_hint],
 			"system"
 		)
 	else:
@@ -417,14 +504,10 @@ func apply_random_event() -> void:
 
 
 func check_loss_from_resources(context: String) -> void:
-	if game.o2 <= 0.0:
-		set_game_over("Oxy đã cạn %s." % context)
-		return
-	if game.hp <= 0.0:
-		set_game_over("Phi hành gia gục ngã %s." % context)
-		return
-	if game.battery <= 0.0 and game.repair_progress < 100.0:
-		set_game_over("Pin cạn %s trước khi sửa xong phi thuyền." % context)
+	var state: Dictionary = build_survival_state()
+	var reason: String = game.SurvivalSystem.loss_reason(state)
+	if reason != "":
+		set_game_over("%s (%s)" % [reason, context])
 
 
 func get_allocation_from_ui() -> Dictionary:
@@ -528,6 +611,7 @@ func set_game_over(reason: String) -> void:
 	game.death_reason = reason
 	game.status_line = "THUA CUỘC: %s" % reason
 	game.ai_controller.log_ai("Hệ thống", game.status_line, "system")
+	game.ui_controller.show_result_overlay(false, reason)
 
 
 func set_win() -> void:
@@ -536,6 +620,7 @@ func set_win() -> void:
 	game.death_reason = ""
 	game.status_line = "CHIẾN THẮNG: Bạn đã sửa tàu và kích hoạt escape thành công."
 	game.ai_controller.log_ai("Hệ thống", game.status_line, "system")
+	game.ui_controller.show_result_overlay(true, game.status_line)
 
 
 func current_stage_goal_text() -> String:

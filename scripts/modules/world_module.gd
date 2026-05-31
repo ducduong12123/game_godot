@@ -44,6 +44,7 @@ func draw() -> void:
 
 
 func try_move_player(delta_move: Vector2) -> void:
+	_sync_data_from_editable_nodes()
 	var next_pos = game.player_pos + delta_move
 	next_pos.x = clampf(
 		next_pos.x,
@@ -141,24 +142,35 @@ func door_is_open(door_id: String) -> bool:
 
 
 func nearest_door_id() -> String:
-	var nearest = ""
-	var best_dist = game.INTERACT_RANGE
+	_sync_data_from_editable_nodes()
+	var nearest := ""
+	var best_dist := INF
 	for door_id in game.doors.keys():
-		var dist = game.player_pos.distance_to(game.MapData.door_center(game.doors[door_id]))
-		if dist <= best_dist:
+		var door_rect := _door_rect_from_dict(game.doors[door_id]).grow(game.INTERACT_RANGE)
+		if not door_rect.has_point(game.player_pos):
+			continue
+		var dist := _distance_to_rect_center(game.player_pos, door_rect)
+		if dist < best_dist:
 			best_dist = dist
 			nearest = door_id
 	return nearest
 
 
 func nearest_locked_door_id() -> String:
+	_sync_data_from_editable_nodes()
+	var nearest := ""
+	var best_dist := INF
 	for door_id in game.doors.keys():
 		if door_is_open(door_id):
 			continue
-		var dist = game.player_pos.distance_to(game.MapData.door_center(game.doors[door_id]))
-		if dist <= game.INTERACT_RANGE:
-			return door_id
-	return ""
+		var door_rect := _door_rect_from_dict(game.doors[door_id]).grow(game.INTERACT_RANGE)
+		if not door_rect.has_point(game.player_pos):
+			continue
+		var dist := _distance_to_rect_center(game.player_pos, door_rect)
+		if dist < best_dist:
+			best_dist = dist
+			nearest = door_id
+	return nearest
 
 
 func update_near_item() -> void:
@@ -261,9 +273,12 @@ func _door_rect_from_dict(door: Dictionary) -> Rect2:
 	var line_val := float(door.get("line", 0.0))
 	var start_val := float(door.get("start", 0.0))
 	var end_val := float(door.get("end", 0.0))
+	var thickness := float(door.get("block_thickness", 10.0))
+	var min_val := minf(start_val, end_val)
+	var max_val := maxf(start_val, end_val)
 	if str(door.get("orientation", "")) == "vertical":
-		return Rect2(line_val - 5.0, start_val, 10.0, end_val - start_val)
-	return Rect2(start_val, line_val - 5.0, end_val - start_val, 10.0)
+		return Rect2(line_val - thickness * 0.5, min_val, thickness, max_val - min_val)
+	return Rect2(min_val, line_val - thickness * 0.5, max_val - min_val, thickness)
 
 
 func _draw_terminal() -> void:
@@ -440,18 +455,18 @@ func _sync_data_from_editable_nodes() -> void:
 			continue
 		var door: Dictionary = game.doors[door_id]
 		var orientation := str(door.get("orientation", ""))
-		var start_val := float(door.get("start", 0.0))
-		var end_val := float(door.get("end", 0.0))
-		var half_len := (end_val - start_val) * 0.5
-		var door_pos: Vector2 = game.to_local(door_node.global_position)
+		var visual_rect := _node_visual_rect_in_game_space(door_node)
+		var door_pos := visual_rect.get_center()
 		if orientation == "vertical":
 			door["line"] = door_pos.x
-			door["start"] = door_pos.y - half_len
-			door["end"] = door_pos.y + half_len
+			door["start"] = visual_rect.position.y
+			door["end"] = visual_rect.end.y
+			door["block_thickness"] = maxf(visual_rect.size.x, 10.0)
 		else:
 			door["line"] = door_pos.y
-			door["start"] = door_pos.x - half_len
-			door["end"] = door_pos.x + half_len
+			door["start"] = visual_rect.position.x
+			door["end"] = visual_rect.end.x
+			door["block_thickness"] = maxf(visual_rect.size.y, 10.0)
 		game.doors[door_id] = door
 
 
@@ -485,6 +500,44 @@ func _sync_editable_visual_nodes() -> void:
 	if _player_node != null:
 		_player_node.global_position = game.to_global(game.player_pos)
 		_set_sprite_texture(_player_node, _current_player_sprite())
+
+
+func _node_visual_size(node: Node2D) -> Vector2:
+	var sprite := node as Sprite2D
+	if sprite != null and sprite.texture != null:
+		return sprite.texture.get_size() * sprite.scale.abs()
+	return Vector2(58.0, 58.0)
+
+
+func _node_visual_rect_in_game_space(node: Node2D) -> Rect2:
+	var sprite := node as Sprite2D
+	if sprite == null or sprite.texture == null:
+		var center: Vector2 = game.to_local(node.global_position)
+		return Rect2(center - Vector2(29.0, 29.0), Vector2(58.0, 58.0))
+
+	var local_rect := sprite.get_rect()
+	var points := [
+		local_rect.position,
+		local_rect.position + Vector2(local_rect.size.x, 0.0),
+		local_rect.position + local_rect.size,
+		local_rect.position + Vector2(0.0, local_rect.size.y)
+	]
+
+	var first_point: Vector2 = game.to_local(sprite.to_global(points[0]))
+	var min_pos := first_point
+	var max_pos := first_point
+	for i in range(1, points.size()):
+		var point: Vector2 = game.to_local(sprite.to_global(points[i]))
+		min_pos.x = minf(min_pos.x, point.x)
+		min_pos.y = minf(min_pos.y, point.y)
+		max_pos.x = maxf(max_pos.x, point.x)
+		max_pos.y = maxf(max_pos.y, point.y)
+
+	return Rect2(min_pos, max_pos - min_pos)
+
+
+func _distance_to_rect_center(point: Vector2, rect: Rect2) -> float:
+	return point.distance_to(rect.get_center())
 
 
 func _set_sprite_texture(node: Sprite2D, sprite_key: String) -> void:
